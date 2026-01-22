@@ -53,7 +53,7 @@ function run(bin, args, opts = {}) {
 const step = msg => console.log(pc.cyan(msg));
 
 function updatePackage(version) {
-  const pkgPath = resolve(resolve(dir, '..'), 'package.json');
+  const pkgPath = resolve(resolve(dir, '.'), 'package.json');
   const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'));
 
   pkg.version = version;
