@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
-import lake2html from '../src';
+import { toHTML } from '../src';
 
 it('image', () => {
   const input = '';
   const output = '';
-  expect(lake2html(input)).toBe(output);
+  expect(toHTML(input)).toBe(output);
 });
