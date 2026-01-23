@@ -1,6 +1,5 @@
 {
   "name": "lake-html",
-  "type": "module",
   "version": "0.0.2",
   "packageManager": "pnpm@10.28.1",
   "description": "A lightweight utility to convert Lake Markup Language (LML) to HTML",
