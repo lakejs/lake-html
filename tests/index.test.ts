@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { toHTML, getDefaultBoxRenderers } from '../src';
+import { toHTML, getBoxRenderers } from '../src';
 
 // Creates a Base64-encoded ASCII string from a string.
 function toBase64(value: string): string {
@@ -164,8 +164,8 @@ describe('toHTML()', () => {
     const val = createBoxValue({ text: '<bar>' });
     const input = `<lake-box name="custom" value="${val}"></lake-box>`;
     const expected = '<div class="foo">&lt;bar&gt;</div>';
-    const rules = getDefaultBoxRenderers();
-    rules.custom = (boxValue, encode) => ({
+    const renderers = getBoxRenderers();
+    renderers.custom = (boxValue, encode) => ({
       tagName: 'div',
       attributes: {
         class: 'foo',
@@ -173,15 +173,15 @@ describe('toHTML()', () => {
       isVoid: false,
       innerHTML: encode(boxValue.text),
     });
-    expect(toHTML(input, rules)).toBe(expected);
+    expect(toHTML(input, renderers)).toBe(expected);
   });
 
-  it('should override the existing rules', () => {
+  it('should override the existing renderers', () => {
     const val = createBoxValue({ url: 'smile.png', name: '<smile>', size: 1024 });
     const input = `<lake-box name="file" value="${val}"></lake-box>`;
     const expected = '<a href="smile.png" target="_blank">&lt;smile&gt; (1024)</a>';
-    const rules = getDefaultBoxRenderers();
-    rules.file = (boxValue, encode) => ({
+    const renderers = getBoxRenderers();
+    renderers.file = (boxValue, encode) => ({
       tagName: 'a',
       attributes: {
         href: boxValue.url,
@@ -189,7 +189,7 @@ describe('toHTML()', () => {
       },
       innerHTML: encode(`${boxValue.name} (${boxValue.size})`),
     });
-    expect(toHTML(input, rules)).toBe(expected);
+    expect(toHTML(input, renderers)).toBe(expected);
   });
 
 });

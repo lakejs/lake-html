@@ -30,7 +30,7 @@ function extractIdFromUrl(url: string): string {
 /**
  * Returns the default configuration for rendering various Lake attributes.
  */
-export function getDefaultBoxRenderers(): BoxRenderers {
+export function getBoxRenderers(): BoxRenderers {
   return {
     hr: () => '<div class="lake-box-block lake-hr"><hr /></div>',
 
@@ -171,15 +171,15 @@ function serializeAttributes(attrs: AttributeMap): string {
  * Main function to convert Lake Markup Language (LML) to standard HTML.
  * It processes custom <lake-box> tags and removes internal anchors.
  */
-export function toHTML(value: string, rules?: BoxRenderers): string {
-  const config = rules ?? getDefaultBoxRenderers();
+export function toHTML(value: string, renderers?: BoxRenderers): string {
+  renderers = renderers ?? getBoxRenderers();
   // Regex to match <lake-box>, <anchor>, and <focus> tags
   const combinedRegex = /(<lake-box[^>]+>)[\s\S]*?(?:<\/lake-box>|$)|(<anchor\s*\/>)|(<focus\s*\/>)/gi;
   return value.replace(combinedRegex, (match, boxOpen) => {
     // Handle lake-box conversion
     if (boxOpen) {
       const attributes = parseAttributes(boxOpen);
-      const render = config[attributes.name];
+      const render = renderers[attributes.name];
       if (render) {
         try {
           const decodedValue = attributes.value ? JSON.parse(decodeBase64(attributes.value)) : {};

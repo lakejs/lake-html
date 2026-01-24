@@ -52,19 +52,19 @@ console.log(html);
 
 ## Customization
 
-You can customize how specific boxes are rendered or add support for new box types by passing a `rules` object as the second argument.
+You can customize how specific boxes are rendered or add support for new box types by passing a `renderers` object as the second argument.
 
 ### Overriding an existing renderer
 
 For example, if you want to wrap all images in a `<figure>` tag:
 
 ```js
-import { toHTML, getDefaultBoxRenderers } from 'lake-html';
+import { toHTML, getBoxRenderers } from 'lake-html';
 
-const rules = getDefaultBoxRenderers();
+const renderers = getBoxRenderers();
 
 // Override the 'image' renderer
-rules.image = (boxValue, encode) => {
+renderers.image = (boxValue, encode) => {
   return {
     tagName: 'figure',
     attributes: { class: 'custom-image' },
@@ -72,38 +72,38 @@ rules.image = (boxValue, encode) => {
   };
 };
 
-const html = toHTML(content, rules);
+const html = toHTML(content, renderers);
 ```
 
 ### Adding a new box type
 
 ```js
-import { toHTML, getDefaultBoxRenderers } from 'lake-html';
+import { toHTML, getBoxRenderers } from 'lake-html';
 
-const rules = getDefaultBoxRenderers();
+const renderers = getBoxRenderers();
 
 // Add a custom 'card' box
-rules.card = (boxValue, encode) => {
+renderers.card = (boxValue, encode) => {
   return `<div class="card">
     <h3>${encode(boxValue.title)}</h3>
     <p>${encode(boxValue.summary)}</p>
   </div>`;
 };
 
-const html = toHTML(content, rules);
+const html = toHTML(content, renderers);
 ```
 
 ## API Reference
 
-### toHTML(value: string, rules?: BoxRenderers): string
+### toHTML(value: string, renderers?: BoxRenderers): string
 
 The main conversion function.
 
 * `value`: The input LML string.
 
-* `rules`: (Optional) An object to override default renderers.
+* `renderers`: (Optional) An object to override default renderers.
 
-### getDefaultBoxRenderers()
+### getBoxRenderers()
 
 Returns the default map of box renderers. Useful when you want to extend the defaults rather than replace them entirely.
 
