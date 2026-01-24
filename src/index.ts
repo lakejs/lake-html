@@ -16,7 +16,7 @@ type EntityEncoder = (value: string) => string;
 type BoxRenderer = (boxValue: AttributeMap, encode: EntityEncoder) => BoxNode | string;
 
 // Registry of renderers for different box types
-type BoxRenderRegistry = Record<string, BoxRenderer>;
+type BoxRenderers = Record<string, BoxRenderer>;
 
 /**
  * Extracts the ID from a URL.
@@ -30,7 +30,7 @@ function extractIdFromUrl(url: string): string {
 /**
  * Returns the default configuration for rendering various Lake attributes.
  */
-export function getDefaultBoxRenderers(): BoxRenderRegistry {
+export function getDefaultBoxRenderers(): BoxRenderers {
   return {
     hr: () => '<div class="lake-box-block lake-hr"><hr /></div>',
 
@@ -171,7 +171,7 @@ function serializeAttributes(attrs: AttributeMap): string {
  * Main function to convert Lake Markup Language (LML) to standard HTML.
  * It processes custom <lake-box> tags and removes internal anchors.
  */
-export function toHTML(value: string, rules?: BoxRenderRegistry): string {
+export function toHTML(value: string, rules?: BoxRenderers): string {
   const config = rules ?? getDefaultBoxRenderers();
   // Regex to match <lake-box>, <anchor>, and <focus> tags
   const combinedRegex = /(<lake-box[^>]+>)[\s\S]*?(?:<\/lake-box>|$)|(<anchor\s*\/>)|(<focus\s*\/>)/gi;

@@ -30,7 +30,7 @@ npm install lake-html
 
 ## Basic Usage
 
-Import the `toHTML` function and pass your LML string.
+Import the `toHTML` function and pass your [LML](https://lakejs.org/guide/content-format) string.
 
 ``` js
 import { toHTML } from 'lake-html';
@@ -68,7 +68,7 @@ rules.image = (boxValue, encode) => {
   return {
     tagName: 'figure',
     attributes: { class: 'custom-image' },
-    textContent: `<img src="${boxValue.url}" alt="${encode(boxValue.caption || '')}" />`
+    innerHTML: `<img src="${encode(boxValue.url)}" alt="${encode(boxValue.caption)}" />`
   };
 };
 
@@ -95,13 +95,13 @@ const html = toHTML(content, rules);
 
 ## API Reference
 
-### toHTML(value: string, rules?: BoxRenderRegistry): string
+### toHTML(value: string, rules?: BoxRenderers): string
 
 The main conversion function.
 
 * `value`: The input LML string.
 
-* `rules`: (Optional) A registry object to override default renderers.
+* `rules`: (Optional) An object to override default renderers.
 
 ### getDefaultBoxRenderers()
 
