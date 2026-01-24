@@ -10,10 +10,10 @@ interface BoxNode {
 }
 
 // Function signature for encoding HTML entities
-type EntityEncoder = (value: string) => string;
+type EncodeHTMLEntities = (value: string) => string;
 
 // Function signature for encoding HTML entities
-type BoxRenderer = (boxValue: AttributeMap, encode: EntityEncoder) => BoxNode | string;
+type BoxRenderer = (boxValue: AttributeMap, encode: EncodeHTMLEntities) => BoxNode | string;
 
 // Registry of renderers for different box types
 type BoxRenderers = Record<string, BoxRenderer>;
