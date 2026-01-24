@@ -1,64 +1,111 @@
-type KeyValue = Record<string, string>;
+// Define a generic type for HTML attributes (key-value pairs)
+type AttributeMap = Record<string, string>;
 
-type TagHandler = (boxValue: KeyValue) => string;
+// Structure representing the output HTML node
+interface BoxNode {
+  tagName: string;
+  attributes?: AttributeMap;
+  isVoid?: boolean; // True for self-closing tags like <img />, <hr />
+  textContent?: string;
+}
 
-const config: Record<string, TagHandler> = {
-  hr: () => '<div class="lake-box-block lake-hr"><hr /></div>',
-  image: boxValue => {
-    const attrs = {
-      src: boxValue.url,
-      ...(boxValue.width && { width: boxValue.width }),
-      ...(boxValue.height && { height: boxValue.height }),
-      ...(boxValue.caption && { alt: boxValue.caption }),
-      border: '0',
-    };
-    return `<img ${stringifyAttributes(attrs)} />`;
-  },
-  file: boxValue => {
-    return `<a href="${escapeSpecialChars(boxValue.url)}" target="_blank">${escapeSpecialChars(boxValue.name)}</a>`;
-  },
-  codeBlock: boxValue => {
-    return `<pre class="lang-${escapeSpecialChars(boxValue.lang)}"><code>${escapeSpecialChars(boxValue.code)}</code></pre>`;
-  },
-  emoji: boxValue => {
-    const attrs = {
-      src: boxValue.url,
-      width: '32',
-      height: '32',
-      border: '0',
-    };
-    return `<img ${stringifyAttributes(attrs)} />`;
-  },
-  equation: boxValue => {
-    return `<code>${escapeSpecialChars(boxValue.code)}</code>`;
-  },
-  video: boxValue => {
-    const attrs = {
-      ...(boxValue.url && { src: `https://www.youtube.com/embed/${getId(boxValue.url)}` }),
-      title: 'YouTube video player',
-      frameborder: '0',
-      allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
-      referrerpolicy: 'strict-origin-when-cross-origin',
-      allowfullscreen: 'true',
-      style: 'width: 560px; height: 315px;',
-    };
-    return `<iframe ${stringifyAttributes(attrs)}></iframe>`;
-  },
-  twitter: boxValue => {
-    const attrs = {
-      ...(boxValue.url && { src: `https://platform.twitter.com/embed/Tweet.html?id=${getId(boxValue.url)}` }),
-      title: 'Twitter tweet',
-      scrolling: 'no',
-      frameborder: '0',
-      allowtransparency: 'true',
-      allowfullscreen: 'true',
-      style: 'width: 550px; height: 300px;',
-    };
-    return `<iframe ${stringifyAttributes(attrs)}></iframe>`;
-  },
-};
+// Function signature for encoding HTML entities
+type EntityEncoder = (value: string) => string;
 
-const characterMap = new Map([
+// Function signature for encoding HTML entities
+type BoxRenderer = (boxValue: AttributeMap, encode: EntityEncoder) => BoxNode | string;
+
+// Registry of renderers for different box types
+type BoxRenderRegistry = Record<string, BoxRenderer>;
+
+/**
+ * Extracts the ID from a URL.
+ * Useful for extracting YouTube or Twitter IDs from clean URLs.
+ */
+function extractIdFromUrl(url: string): string {
+  const result = /[\w\-]+$/.exec(url);
+  return result ? result[0] : '';
+}
+
+/**
+ * Returns the default configuration for rendering various Lake attributes.
+ */
+export function getDefaultBoxRenderers(): BoxRenderRegistry {
+  return {
+    hr: () => '<div class="lake-box-block lake-hr"><hr /></div>',
+
+    image: boxValue => ({
+      tagName: 'img',
+      attributes: {
+        src: boxValue.url,
+        ...(boxValue.width && { width: boxValue.width }),
+        ...(boxValue.height && { height: boxValue.height }),
+        ...(boxValue.caption && { alt: boxValue.caption }),
+        border: '0',
+      },
+      isVoid: true,
+    }),
+
+    file: boxValue => ({
+      tagName: 'a',
+      attributes: {
+        href: boxValue.url,
+        target: '_blank',
+      },
+      textContent: boxValue.name,
+    }),
+
+    codeBlock: (boxValue, encode) => {
+      const langClass = `lang-${encode(boxValue.lang)}`;
+      return `<pre class="${langClass}"><code>${encode(boxValue.code)}</code></pre>`;
+    },
+
+    emoji: boxValue => ({
+      tagName: 'img',
+      attributes: {
+        src: boxValue.url,
+        width: '32',
+        height: '32',
+        border: '0',
+      },
+      isVoid: true,
+    }),
+
+    equation: boxValue => ({
+      tagName: 'code',
+      textContent: boxValue.code,
+    }),
+
+    video: boxValue => ({
+      tagName: 'iframe',
+      attributes: {
+        ...(boxValue.url && { src: `https://www.youtube.com/embed/${extractIdFromUrl(boxValue.url)}` }),
+        title: 'YouTube video player',
+        frameborder: '0',
+        allow: 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share',
+        referrerpolicy: 'strict-origin-when-cross-origin',
+        allowfullscreen: 'true',
+        style: 'width: 560px; height: 315px;',
+      },
+    }),
+
+    twitter: boxValue => ({
+      tagName: 'iframe',
+      attributes: {
+        ...(boxValue.url && { src: `https://platform.twitter.com/embed/Tweet.html?id=${extractIdFromUrl(boxValue.url)}` }),
+        title: 'Twitter tweet',
+        scrolling: 'no',
+        frameborder: '0',
+        allowtransparency: 'true',
+        allowfullscreen: 'true',
+        style: 'width: 550px; height: 300px;',
+      },
+    }),
+  };
+}
+
+// Map for reserved HTML characters
+const htmlEntityMap = new Map([
   ['&', '&amp;'],
   ['<', '&lt;'],
   ['>', '&gt;'],
@@ -67,16 +114,16 @@ const characterMap = new Map([
 ]);
 
 /**
- * Converts all of the reserved characters in the specified string to HTML entities.
+ * Escapes reserved HTML characters to prevent XSS and rendering issues.
  */
-function escapeSpecialChars(value: string): string {
-  return value.replace(/[&<>"\xA0]/g, match => characterMap.get(match) ?? '');
+function encodeHTMLEntities(value: string): string {
+  return value.replace(/[&<>"\xA0]/g, match => htmlEntityMap.get(match)!);
 }
 
 /**
- * Decodes a string of data which has been encoded using Base64 encoding.
+ * Decodes a Base64 encoded string with UTF-8 support.
  */
-function fromBase64(value: string): string {
+function decodeBase64(value: string): string {
   const binaryString = atob(value);
   const byteArray = new Uint8Array(binaryString.length);
   for (let i = 0; i < binaryString.length; i++) {
@@ -87,52 +134,74 @@ function fromBase64(value: string): string {
 }
 
 /**
- * Extracts ID from the specified URL.
+ * Parses HTML tag attributes from a string into a key-value object.
  */
-function getId(url: string): string {
-  const result = /[\w\-]+$/.exec(url || '');
-  return result ? result[0] : '';
-}
-
-function getAttributes(tag: string): KeyValue {
-  const attributes: KeyValue = {};
+function parseAttributes(tag: string): AttributeMap {
+  const attributes: AttributeMap = {};
+  // Regex breakdown:
+  // Group 1/2: Key=Value (unquoted)
+  // Group 3/4: Key="Value" (double quoted)
+  // Group 5/6: Key='Value' (single quoted)
   const reg = /\s+(?:([\w\-:]+)=([^\s"'<>]+)|([\w\-:"]+)="([^"]*)"|([\w\-:"]+)='([^']*)')(?=[\s/>])/g;
   let match: RegExpExecArray | null;
   while ((match = reg.exec(tag))) {
     const key = (match[1] || match[3] || match[5]).toLowerCase();
-    const value = (match[1] ? match[2] : (match[3] ? match[4] : match[6])) || '';
+    const value = match[1] ? match[2] : (match[3] ? match[4] : match[6]);
     attributes[key] = value;
   }
   return attributes;
 }
 
-function stringifyAttributes(attrs: KeyValue): string {
-  let result: string = '';
+/**
+ * Serializes an attribute map into an HTML attribute string.
+ */
+function serializeAttributes(attrs: AttributeMap): string {
+  const result: string[] = [];
   for (const key of Object.keys(attrs)) {
     const value = String(attrs[key]);
-    result += `${key}="${escapeSpecialChars(value)}" `;
+    result.push(`${key}="${encodeHTMLEntities(value)}"`);
   }
-  return result.trim();
+  return result.join(' ');
 }
 
 /**
- * Converts LML string to HTML string.
+ * Main function to convert Lake Markup Language (LML) to standard HTML.
+ * It processes custom <lake-box> tags and removes internal anchors.
  */
-export function toHTML(value: string): string {
+export function toHTML(value: string, rules?: BoxRenderRegistry): string {
+  const config = rules ?? getDefaultBoxRenderers();
+  // Regex to match <lake-box>, <anchor>, and <focus> tags
   const combinedRegex = /(<lake-box[^>]+>)[\s\S]*?(?:<\/lake-box>|$)|(<anchor\s*\/>)|(<focus\s*\/>)/gi;
   return value.replace(combinedRegex, (match, boxOpen) => {
+    // Handle lake-box conversion
     if (boxOpen) {
-      const attributes = getAttributes(boxOpen);
-      const handler = config[attributes.name];
-      if (handler) {
+      const attributes = parseAttributes(boxOpen);
+      const render = config[attributes.name];
+      if (render) {
         try {
-          const decodedValue = attributes.value ? JSON.parse(fromBase64(attributes.value)) : {};
-          return handler(decodedValue);
+          const decodedValue = attributes.value ? JSON.parse(decodeBase64(attributes.value)) : {};
+          const result = render(decodedValue, encodeHTMLEntities);
+          // If renderer returns a raw string, return it directly
+          if (typeof result === 'string') {
+            return result;
+          }
+          // Otherwise, build the HTML tag from BoxNode
+          let html = `<${result.tagName}`;
+          if (result.attributes) {
+            html += ` ${serializeAttributes(result.attributes)}`;
+          }
+          if (result.isVoid === true) {
+            html += ' />';
+          } else {
+            html += `>${encodeHTMLEntities(result.textContent ?? '')}</${result.tagName}>`;
+          }
+          return html;
         } catch (e) {
           console.error('Failed to parse lake-box value:', e);
         }
       }
     }
+    // Remove internal selection markers (<anchor /> and <focus />)
     return '';
   });
 }

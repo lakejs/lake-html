@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { toHTML } from '../src';
+import { toHTML, getDefaultBoxRenderers } from '../src';
 
 // Creates a Base64-encoded ASCII string from a string.
 function toBase64(value: string): string {
@@ -75,9 +75,9 @@ describe('toHTML()', () => {
   });
 
   it('should convert file box', () => {
-    const val = createBoxValue({ url: 'smile.png', name: 'smile' });
+    const val = createBoxValue({ url: 'smile.png', name: '<smile>' });
     const input = `<lake-box name="file" value="${val}"></lake-box>`;
-    const expected = '<a href="smile.png" target="_blank">smile</a>';
+    const expected = '<a href="smile.png" target="_blank">&lt;smile&gt;</a>';
     expect(toHTML(input)).toBe(expected);
   });
 
@@ -95,10 +95,23 @@ describe('toHTML()', () => {
     expect(toHTML(input)).toBe(expected);
   });
 
-  it('should convert video box', () => {
+  it('should convert video box with url', () => {
     const val = createBoxValue({ url: 'https://www.youtube.com/watch?v=5sMBhDv4sik' });
     const input = `<lake-box name="video" value="${val}"></lake-box>`;
     const expected = '<iframe src="https://www.youtube.com/embed/5sMBhDv4sik" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen="true" style="width: 560px; height: 315px;"></iframe>';
+    expect(toHTML(input)).toBe(expected);
+  });
+
+  it('should convert video box with empty values', () => {
+    const input = `<lake-box name="video" value="e30="></lake-box>`;
+    const expected = '<iframe title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen="true" style="width: 560px; height: 315px;"></iframe>';
+    expect(toHTML(input)).toBe(expected);
+  });
+
+  it('should convert video box with invalid url', () => {
+    const val = createBoxValue({ url: 'https://www.youtube.com/' });
+    const input = `<lake-box name="video" value="${val}"></lake-box>`;
+    const expected = '<iframe src="https://www.youtube.com/embed/" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen="true" style="width: 560px; height: 315px;"></iframe>';
     expect(toHTML(input)).toBe(expected);
   });
 
@@ -145,6 +158,22 @@ describe('toHTML()', () => {
     const input = '<lake-box name="image" value="invalid-base64!"></lake-box>';
     expect(toHTML(input)).toBe('');
     expect(consoleSpy).toHaveBeenCalledWith('Failed to parse lake-box value:', expect.any(Error));
+  });
+
+  it('should convert custom box', () => {
+    const val = createBoxValue({ text: '<bar>' });
+    const input = `<lake-box name="custom" value="${val}"></lake-box>`;
+    const expected = '<div class="foo">&lt;bar&gt;</div>';
+    const rules = getDefaultBoxRenderers();
+    rules.custom = boxValue => ({
+      tagName: 'div',
+      attributes: {
+        class: 'foo',
+      },
+      isVoid: false,
+      textContent: boxValue.text,
+    });
+    expect(toHTML(input, rules)).toBe(expected);
   });
 
 });
